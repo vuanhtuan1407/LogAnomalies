@@ -12,7 +12,7 @@ output.kafka:
   hosts: [ "kafka:29092" ]
   topic: '%{[fields.kafka_topic]}'
   codec.format:
-    string: '%{[message]}'
+    string: '%{[@timestamp]} %{[message]}'
 
 # Monitoring endpoint
 http.enabled: true

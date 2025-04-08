@@ -1,13 +1,13 @@
 # Default scale values (can be overridden via CLI)
 KAFKA_SCALE ?= 1
-FILEBEAT_SCALE ?= 1
+FLUENTBIT_SCALE ?= 1  # DO NOT scale if only have 1 .log file
 
 # Start environment normally (with scale)
 up:
 	docker compose up -d \
 		--build \
 		--scale kafka=$(KAFKA_SCALE) \
-		--scale filebeat=$(FILEBEAT_SCALE) \
+		--scale fluentbit=$(FLUENTBIT_SCALE) \
 		--remove-orphans
 
 # Start and force recreate (with scale)
@@ -15,7 +15,7 @@ up-force:
 	docker compose up -d --force-recreate \
 		--build \
 		--scale kafka=$(KAFKA_SCALE) \
-		--scale filebeat=$(FILEBEAT_SCALE) \
+		--scale fluentbit=$(FLUENTBIT_SCALE) \
 		--remove-orphans
 
 # Stop and remove services + volumes

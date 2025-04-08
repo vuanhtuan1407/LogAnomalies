@@ -34,20 +34,20 @@ services:
     networks:
       - bigdata-net
 
-  filebeat:
-    image: elastic/filebeat:8.17.4
-    restart: unless-stopped
-    user: root
-    ports:
-      - "5066:5066"  # Expose monitoring por
-    volumes:
-      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./logs:/var/log:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: [ "--strict.perms=false" ]  # disable permission check in dev
-    networks:
-      - bigdata-net
+  #  filebeat:
+  #    image: elastic/filebeat:8.17.4
+  #    restart: unless-stopped
+  #    user: root
+  #    ports:
+  #      - "5066:5066"  # Expose monitoring por
+  #    volumes:
+  #      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+  #      - ./logs:/var/log:ro
+  #      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+  #      - /var/run/docker.sock:/var/run/docker.sock:ro
+  #    command: [ "--strict.perms=false" ]  # disable permission check in dev
+  #    networks:
+  #      - bigdata-net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -117,6 +117,24 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
+    networks:
+      - bigdata-net
+
+  fluentbit:
+    build:
+      context: ./fluentbit
+      dockerfile: fluent-bit.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./logs:/var/log/app
+    environment:
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+    ports:
+      - "2020:2020"
+    depends_on:
+      - kafka
+      - minio
     networks:
       - bigdata-net
 

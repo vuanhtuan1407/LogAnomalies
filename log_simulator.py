@@ -1,7 +1,7 @@
 import time
 
 from logger import get_logger
-from utils import parse_log_with_datetime
+from utils import parse_log_with_datetime, delete_log
 
 logger = get_logger()
 

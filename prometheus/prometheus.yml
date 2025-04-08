@@ -6,13 +6,18 @@ scrape_configs:
   - job_name: 'flink-jobmanager'
     metrics_path: '/jobmanager/metrics'
     static_configs:
-      - targets: ['flink-jobmanager:8081']
+      - targets: [ 'flink-jobmanager:8081' ]
 
   - job_name: 'flink-taskmanager'
     metrics_path: '/taskmanager/metrics'
     static_configs:
-      - targets: ['flink-taskmanager:8081']
+      - targets: [ 'flink-taskmanager:8081' ]
+
+  - job_name: 'fluentbit'
+    metrics_path: '/api/v1/metrics'
+    static_configs:
+      - targets: [ 'fluentbit:2020' ]
 
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: [ 'localhost:9090' ]

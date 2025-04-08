@@ -1,6 +1,9 @@
 import csv
 import re
 from datetime import datetime
+import glob
+import os
+from pathlib import Path
 
 
 def to_datetime(date_str, time_str):
@@ -33,3 +36,9 @@ def load_templates(csv_path="/opt/flink/jobs/event_template.csv"):
                 re.compile(pattern)  # regex compiled
             ))
     return templates
+
+
+def delete_log():
+    LOG_DIR = str(Path(__file__).resolve().parent / 'logs')
+    for f in glob.glob(f"{LOG_DIR}/*.log"):
+        os.remove(f)
