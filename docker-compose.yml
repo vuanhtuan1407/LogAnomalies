@@ -64,47 +64,6 @@ services:
     networks:
       - bigdata-net
 
-  flink-jobmanager:
-    build:
-      context: ./flink
-      dockerfile: flink-s3a.Dockerfile
-    command: jobmanager
-    restart: unless-stopped
-    ports:
-      - "8081:8081"  # Flink Web UI
-      - "6123:6123"  # RPC port
-    networks:
-      - bigdata-net
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: flink-jobmanager
-        s3.endpoint: http://minio:9000
-        s3.path.style.access: true
-        s3.access-key: minioadmin
-        s3.secret-key: minioadmin
-
-  flink-taskmanager:
-    build:
-      context: ./flink
-      dockerfile: flink-s3a.Dockerfile
-    command: taskmanager
-    restart: unless-stopped
-    depends_on:
-      - flink-jobmanager
-    networks:
-      - bigdata-net
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: flink-jobmanager
-        s3.endpoint: http://minio:9000
-        s3.path.style.access: true
-        s3.access-key: minioadmin
-        s3.secret-key: minioadmin
-    volumes:
-      - flink_tm_data:/data
-
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"
@@ -117,6 +76,7 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
+      - ./minio/init-buckets.sh:/docker-entrypoint-init.d/init-buckets.sh
     networks:
       - bigdata-net
 
@@ -143,8 +103,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: anomaly_logs
+      POSTGRES_PASSWORD: mysecret
+      POSTGRES_DB: system_logs
     ports:
       - "5432:5432"
     volumes:
@@ -168,6 +128,34 @@ services:
       - postgres
     networks:
       - bigdata-net
+
+  flink-jobmanager:
+    build:
+      context: ./flink
+      dockerfile: flink-connected.Dockerfile
+    command: jobmanager
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # Flink Web UI
+      - "6123:6123"  # RPC port
+    networks:
+      - bigdata-net
+    volumes:
+      - ./flink/flink-conf.yml:/opt/flink/conf/flink-conf.yml
+
+  flink-taskmanager:
+    build:
+      context: ./flink
+      dockerfile: flink-connected.Dockerfile
+    command: taskmanager
+    restart: unless-stopped
+    depends_on:
+      - flink-jobmanager
+    networks:
+      - bigdata-net
+    volumes:
+      - ./flink/flink-conf.yml:/opt/flink/conf/flink-conf.yml
+      - flink_tm_data:/data
 
   prometheus:
     image: prom/prometheus:latest
@@ -195,9 +183,7 @@ services:
     networks:
       - bigdata-net
 
-  # create-minio-bucket
-
-  # submit-flink-job
+  # Automatic services: submit-flink-job
 
 networks:
   bigdata-net:

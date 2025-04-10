@@ -19,7 +19,6 @@ venv/
 env/
 ENV/
 *.env
-*.env.*
 
 # Jupyter runtime
 ~/.local/share/jupyter/runtime
@@ -70,4 +69,8 @@ docker-compose.override.yml
 Thumbs.db
 ehthumbs.db
 Icon?
+
+# Library
+*/lib/
+*.jar
 

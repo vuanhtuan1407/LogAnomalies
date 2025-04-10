@@ -1,100 +1,91 @@
-import json
-import re
+from pyflink.table import EnvironmentSettings, TableEnvironment, TableDescriptor, Schema
+from pyflink.table.types import DataTypes
+from pyflink.table.udf import udf
+from pyflink.table.expressions import call, col
 
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.common.serialization import SimpleStringSchema
-from pyflink.common.typeinfo import Types
-from pyflink.table import EnvironmentSettings, TableEnvironment
-from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer
+env_settings = EnvironmentSettings.in_streaming_mode()
+t_env = TableEnvironment.create(env_settings)
 
-from postgres.pg import insert_anomaly
-from utils import load_templates
+# create source table
+source_schema = Schema.new_builder() \
+    .column('value', DataTypes.STRING()) \
+    .build()
 
-TEMPLATES = load_templates()
+t_env.create_temporary_table(
+    'source',
+    TableDescriptor.for_connector('kafka')
+    .schema(source_schema)
+    .option("topic", "raw_logs")
+    .option("properties.bootstrap.servers", "kafka:29092")
+    .option("scan.startup.mode", "earliest-offset")
+    .format("raw")
+    .option("value.format", "raw")
+    .option("value.data-type", "STRING")
+    .build()
+)
 
+# create MinIO sink table
+minio_schema = Schema.new_builder() \
+    .column('value', DataTypes.STRING()) \
+    .build()
 
-# Hàm chính để parse từng dòng log
-def parse_log_line(line: str):
-    """
-    Trả về tuple:
-    (date, time, pid, level, component, event_id, event_template, template_params)
-    """
-    log_pattern = re.compile(
-        r"(\d{4}-\d{2}-\d{2})\s+"  # date
-        r"(\d{2}:\d{2}:\d{2})\s+"  # time
-        r"(\d+)\s+"  # pid
-        r"(\w+)\s+"  # level
-        r"([^:]+):\s+"  # component
-        r"(.+)"  # content
-    )
+t_env.create_temporary_table(
+    'minio_sink',
+    TableDescriptor.for_connector("filesystem")
+    .schema(minio_schema)
+    .option("path", "s3a://bucket-cleaned/output/")
+    .option("format", "avro")
+    .build()
+)
 
-    match = log_pattern.match(line)
-    if not match:
-        return None  # dòng log không hợp lệ
+# create pg sink table
+pg_schema = Schema.new_builder() \
+    .column('value', DataTypes.STRING()) \
+    .column('label', DataTypes.BOOLEAN()) \
+    .build()
 
-    date, time, pid, level, component, content = match.groups()
-
-    # So khớp với các event template
-    for event_id, template_str, regex in TEMPLATES:
-        match_template = regex.match(content)
-        if match_template:
-            return (
-                date,
-                time,
-                pid,
-                level,
-                component,
-                event_id,
-                template_str,
-                json.dumps(match_template.groups())  # serialize các phần match
-            )
-
-    # Không khớp template nào
-    return (
-        date,
-        time,
-        pid,
-        level,
-        component,
-        "UNKNOWN",
-        "",
-        json.dumps([])
-    )
+t_env.create_temporary_table(
+    'pg_sink',
+    TableDescriptor.for_connector("jdbc")
+    .schema(pg_schema)
+    .option("url", "jdbc:postgresql://postgres:5432/system_logs")
+    .option("table-name", "inference_results")
+    .option("username", "postgres")
+    .option("password", "mysecret")
+    .option("driver", "org.postgresql.Driver")
+    .build()
+)
 
 
-def main():
-    # Khởi tạo Table API environment
-    env_settings = EnvironmentSettings.in_streaming_mode()
-    t_env = TableEnvironment.create(environment_settings=env_settings)
-
-    # 1️⃣ Tạo Kafka Source Table (đọc từ topic 'hdfs-logs')
-    t_env.execute_sql("""
-        CREATE TABLE kafka_logs (
-            raw_line STRING
-        ) WITH (
-            'connector' = 'kafka',
-            'topic' = 'hdfs-logs',
-            'properties.bootstrap.servers' = 'kafka:29092',
-            'scan.startup.mode' = 'earliest-offset',
-            'format' = 'raw'  -- raw = không cần format hóa
-        )
-    """)
-
-    # 2️⃣ Đọc table thành một DataStream (vì cần xử lý tùy biến bằng Python)
-    table = t_env.from_path("kafka_logs")
-    ds = t_env.to_append_stream(table, type_info=None)  # raw_line là string
-
-    # 3️⃣ Xử lý từng dòng log → match template → ghi PostgreSQL
-    (
-        ds.map(lambda row: row[0])  # chỉ lấy raw_line
-          .map(parse_log_line)
-          .filter(lambda r: r is not None and r[5] != "UNKNOWN")
-          .map(insert_anomaly)
-    )
-
-    # 4️⃣ Kích hoạt thực thi
-    t_env.execute("Anomaly Table Job - Kafka → PostgreSQL")
+@udf(result_type=DataTypes.ROW([
+    DataTypes.FIELD('parsed_log', DataTypes.STRING())
+]))
+def parse_log(log: str):
+    return log
 
 
-if __name__ == "__main__":
-    main()
+t_env.create_temporary_function('parse_log', parse_log)
+
+
+@udf(result_type=DataTypes.BOOLEAN())
+def predict_anomaly(parsed_log: str):
+    return True
+
+
+t_env.create_temporary_function('predict_anomaly', predict_anomaly)
+
+inp_table = t_env.from_path('source')
+
+parsed = inp_table \
+    .select(call('parse_log', col('value')).alias('log')) \
+    .select(col('log').get('parsed_log').alias('value'))
+
+parsed.execute_insert('minio_sink').wait()
+
+pred = parsed \
+    .select(
+    col('value'),
+    call('predict_anomaly', col('value')).alias('label')
+)
+
+pred.execute_insert('pg_sink').wait()

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS anomalies (
+CREATE TABLE IF NOT EXISTS system_logs (
     id SERIAL PRIMARY KEY,
     date DATE NOT NULL,
     time TIME NOT NULL,

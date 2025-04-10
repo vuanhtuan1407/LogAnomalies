@@ -1,11 +1,11 @@
 filebeat.inputs:
   - type: filestream
-    id: hdfs-logs
+    id: system-logs
     enabled: true
     paths:
       - /var/log/default.log
     fields:
-      kafka_topic: hdfs-logs
+      kafka_topic: system-logs
 
 # Kafka output
 output.kafka:
