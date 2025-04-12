@@ -5,14 +5,14 @@ filebeat.inputs:
     paths:
       - /var/log/default.log
     fields:
-      kafka_topic: system-logs
+      kafka_topic: raw-logs
 
 # Kafka output
 output.kafka:
   hosts: [ "kafka:29092" ]
   topic: '%{[fields.kafka_topic]}'
   codec.format:
-    string: '%{[@timestamp]} %{[message]}'
+    string: '%{[message]}'
 
 # Monitoring endpoint
 http.enabled: true

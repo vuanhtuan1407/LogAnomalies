@@ -11,13 +11,13 @@ logger.propagate = False  # Avoid duplicate logs when using multiple loggers
 
 def config_file_handler(filename='default.log'):
     fh = logging.FileHandler(str(LOG_DIR / filename))
-    fh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    fh.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(fh)
 
 
 def config_stream_handler():
     sh = logging.StreamHandler()
-    sh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    sh.setFormatter(logging.Formatter('%(message)s'))
     logger.addHandler(sh)
 
 

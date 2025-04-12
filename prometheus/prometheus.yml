@@ -10,8 +10,11 @@ scrape_configs:
 
   - job_name: 'flink-taskmanager'
     metrics_path: '/taskmanager/metrics'
-    static_configs:
-      - targets: [ 'flink-taskmanager:8081' ]
+    dns_sd_configs:
+      - names:
+          - 'tasks.flink-taskmanager'
+        type: 'A'
+        port: 8081
 
   - job_name: 'fluentbit'
     metrics_path: '/api/v1/metrics'

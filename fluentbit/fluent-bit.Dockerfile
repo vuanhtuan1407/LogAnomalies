@@ -36,8 +36,8 @@ RUN tar -xzf fluent-bit.tar.gz && \
 
 
 # Copy configs
-COPY fluent-bit.conf /fluent-bit/etc/fluent-bit.conf
-COPY parsers.conf /fluent-bit/etc/parsers.conf
+#COPY fluent-bit.conf /fluent-bit/etc/fluent-bit.conf
+#COPY parsers.conf /fluent-bit/etc/parsers.conf
 COPY fluentbit-entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
