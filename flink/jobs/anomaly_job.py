@@ -31,9 +31,9 @@ t_env.create_temporary_table(
 # postgres sink
 pg_schema = Schema.new_builder() \
     .column('timestamp', DataTypes.STRING()) \
-    .column('date', DataTypes.STRING()) \
+    .column('date', DataTypes.DATE()) \
     .column('node', DataTypes.STRING()) \
-    .column('time', DataTypes.STRING()) \
+    .column('time', DataTypes.TIMESTAMP()) \
     .column('nodeRepeat', DataTypes.STRING()) \
     .column('type', DataTypes.STRING()) \
     .column('component', DataTypes.STRING()) \
@@ -114,12 +114,12 @@ def predict_anomaly(log: str):
     DataTypes.FIELD("Content", DataTypes.STRING())
 ]))
 def process_key(log):
-    id_, date, code1, time, code2, typee, comp1, level, content = parse_log_line(log)
+    id_, date, code1, _, code2, typee, comp1, level, content = parse_log_line(log)
     return Row(
         Timestamp=id_,
         Date=datetime.strptime(date, '%Y.%m.%d').date(),
         Node=code1,
-        Time=datetime.strptime(time, '%Y-%m-%d-%H.%M.%S.%f'),
+        Time=datetime.now(),
         NodeRepeat=code2,
         Type=typee,
         Component=comp1,

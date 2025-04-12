@@ -22,4 +22,4 @@ class LogSim:
 
 if __name__ == "__main__":
     sim = LogSim(src_path='./data/BGL/BGL_test.log')
-    sim.stream(speed=0.5, delay_epsilon=2)
+    sim.stream(speed=2, delay_epsilon=0.5)
