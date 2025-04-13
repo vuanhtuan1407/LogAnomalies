@@ -105,6 +105,7 @@ services:
     ports:
       - "8081:8081"  # Flink Web UI
       - "6123:6123"  # RPC port
+      - "9249:9249"
     networks:
       - bigdata-net
     volumes:
@@ -121,6 +122,8 @@ services:
     restart: unless-stopped
     depends_on:
       - flink-jobmanager
+    ports:
+      - "9250:9249"
     environment:
       - |
         FLINK_PROPERTIES=

@@ -16,10 +16,12 @@ scrape_configs:
         type: 'A'
         port: 8081
 
-  - job_name: 'fluentbit'
-    metrics_path: '/api/v1/metrics'
+  - job_name: 'flink-metrics-exporter'
+    metrics_path: /metrics
     static_configs:
-      - targets: [ 'fluentbit:2020' ]
+      - targets:
+          - 'flink-taskmanager:9249'
+          - 'flink-jobmanager:9249'
 
   - job_name: 'prometheus'
     static_configs:
